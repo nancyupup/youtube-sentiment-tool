@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YouTube 舆情分析工具</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
+                "PingFang SC", "Microsoft YaHei", Arial, sans-serif;
+            background: #f5f6f8;
+            color: #1f2937;
+        }
+
+        .container {
+            width: min(1400px, calc(100% - 40px));
+            margin: 0 auto;
+        }
+
+        /* 顶部 */
+        .header {
+            background: #111827;
+            color: white;
+            padding: 28px 0;
+        }
+
+        .header-inner {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: 700;
+        }
+
+        .subtitle {
+            margin-top: 6px;
+            color: #9ca3af;
+            font-size: 14px;
+        }
+
+        .status {
+            padding: 7px 12px;
+            border-radius: 20px;
+            background: #1f2937;
+            color: #9ca3af;
+            font-size: 13px;
+        }
+
+        /* 输入区域 */
+        .search-card {
+            background: white;
+            margin-top: 24px;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .search-title {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 16px;
+        }
+
+        .input-row {
+            display: flex;
+            gap: 12px;
+        }
+
+        .url-input {
+            flex: 1;
+            height: 48px;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            padding: 0 15px;
+            font-size: 14px;
+            outline: none;
+        }
+
+        .url-input:focus {
+            border-color: #2563eb;
+        }
+
+        .analyze-btn {
+            height: 48px;
+            padding: 0 28px;
+            border: none;
+            border-radius: 8px;
+            background: #2563eb;
+            color: white;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .analyze-btn:hover {
+            background: #1d4ed8;
+        }
+
+        .analyze-btn:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+        }
+
+        .hint {
+            margin-top: 10px;
+            font-size: 13px;
+            color: #9ca3af;
+        }
+
+        /* 视频信息 */
+        .video-card {
+            background: white;
+            margin-top: 20px;
+            border-radius: 12px;
+            padding: 22px;
+            display: none;
+        }
+
+        .video-title {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .video-meta {
+            color: #6b7280;
+            font-size: 14px;
+        }
+
+        /* 数据概览 */
+        .section {
+            margin-top: 24px;
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 14px;
+        }
+
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+        }
+
+        .stat-card {
+            background: white;
+            border-radius: 12px;
+            padding: 22px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+        }
+
+        .stat-label {
+            font-size: 14px;
+            color: #6b7280;
+        }
+
+        .stat-value {
+            margin-top: 8px;
+            font-size: 30px;
+            font-weight: 700;
+        }
+
+        .positive {
+            color: #16a34a;
+        }
+
+        .neutral {
+            color: #6b7280;
+        }
+
+        .negative {
+            color: #dc2626;
+        }
+
+        /* 风险 */
+        .risk-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+        }
+
+        .risk-card {
+            background: white;
+            border-radius: 12px;
+            padding: 22px;
+        }
+
+        .risk-name {
+            font-size: 14px;
+            color: #6b7280;
+        }
+
+        .risk-number {
+            margin-top: 8px;
+            font-size: 28px;
+            font-weight: 700;
+        }
+
+        /* 主题 */
+        .topic-card {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+        }
+
+        .topic-row {
+            display: grid;
+            grid-template-columns: 250px 1fr 60px;
+            gap: 15px;
+            align-items: center;
+            margin-bottom: 18px;
+        }
+
+        .topic-name {
+            font-size: 14px;
+        }
+
+        .bar {
+            height: 10px;
+            background: #e5e7eb;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .bar-inner {
+            height: 100%;
+            background: #2563eb;
+            border-radius: 10px;
+        }
+
+        .topic-count {
+            text-align: right;
+            font-weight: 600;
+        }
+
+        /* AI总结 */
+        .summary-card {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+        }
+
+        .summary-block {
+            margin-bottom: 22px;
+        }
+
+        .summary-block:last-child {
+            margin-bottom: 0;
+        }
+
+        .summary-heading {
+            font-size: 15px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .summary-text {
+            line-height: 1.7;
+            color: #4b5563;
+            font-size: 14px;
+        }
+
+        /* 评论表格 */
+        .table-card {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        .table-toolbar {
+            padding: 18px;
+            display: flex;
+            gap: 10px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+
+        .filter {
+            height: 38px;
+            border: 1px solid #d1d5db;
+            border-radius: 7px;
+            padding: 0 10px;
+            background: white;
+        }
+
+        .comment-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .comment-table th,
+        .comment-table td {
+            padding: 14px 16px;
+            border-bottom: 1px solid #f0f0f0;
+            text-align: left;
+            vertical-align: top;
+            font-size: 13px;
+        }
+
+        .comment-table th {
+            background: #f9fafb;
+            color: #6b7280;
+            font-weight: 600;
+        }
+
+        .comment-text {
+            max-width: 520px;
+            line-height: 1.6;
+        }
+
+        .tag {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 5px;
+            font-size: 12px;
+            white-space: nowrap;
+        }
+
+        .tag-positive {
+            background: #dcfce7;
+            color: #15803d;
+        }
+
+        .tag-neutral {
+            background: #f3f4f6;
+            color: #4b5563;
+        }
+
+        .tag-negative {
+            background: #fee2e2;
+            color: #b91c1c;
+        }
+
+        .tag-high {
+            background: #fee2e2;
+            color: #b91c1c;
+        }
+
+        .tag-medium {
+            background: #ffedd5;
+            color: #c2410c;
+        }
+
+        .tag-low {
+            background: #dcfce7;
+            color: #15803d;
+        }
+
+        /* 空状态 */
+        .empty {
+            padding: 60px 20px;
+            text-align: center;
+            color: #9ca3af;
+        }
+
+        /* 加载 */
+        .loading {
+            display: none;
+            padding: 30px;
+            text-align: center;
+            color: #6b7280;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 22px;
+            height: 22px;
+            border: 3px solid #e5e7eb;
+            border-top-color: #2563eb;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            vertical-align: middle;
+            margin-right: 8px;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* 底部 */
+        .footer {
+            text-align: center;
+            padding: 40px 0;
+            color: #9ca3af;
+            font-size: 13px;
+        }
+
+        @media (max-width: 900px) {
+            .stat-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .risk-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .input-row {
+                flex-direction: column;
+            }
+
+            .topic-row {
+                grid-template-columns: 1fr;
+                gap: 7px;
+            }
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                width: min(100% - 24px, 1400px);
+            }
+
+            .stat-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .header-inner {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .comment-table {
+                min-width: 900px;
+            }
+
+            .table-card {
+                overflow-x: auto;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+<header class="header">
+    <div class="container header-inner">
+        <div>
+            <div class="logo">YouTube 舆情分析工具</div>
+            <div class="subtitle">
+                YouTube 评论采集 · AI 情绪分析 · 风险检测 · 用户需求分析
+            </div>
+        </div>
+
+        <div class="status" id="systemStatus">
+            等待分析
+        </div>
+    </div>
+</header>
+
+<main class="container">
+
+    <!-- URL输入 -->
+    <section class="search-card">
+        <div class="search-title">输入 YouTube 视频链接</div>
+
+        <div class="input-row">
+            <input
+                id="youtubeUrl"
+                class="url-input"
+                type="text"
+                placeholder="例如：https://www.youtube.com/watch?v=xxxxxxxx"
+            >
+
+            <button
+                id="analyzeBtn"
+                class="analyze-btn"
+                onclick="startAnalysis()"
+            >
+                开始分析
+            </button>
+        </div>
+
+        <div class="hint">
+            第一阶段仅用于测试网页界面，YouTube API 和 AI 功能将在后续步骤接入。
+        </div>
+    </section>
+
+    <!-- 加载 -->
+    <div class="loading" id="loading">
+        <span class="spinner"></span>
+        正在分析，请稍候……
+    </div>
+
+    <!-- 视频信息 -->
+    <section class="video-card" id="videoCard">
+        <div class="video-title" id="videoTitle">
+            YouTube 视频标题
+        </div>
+
+        <div class="video-meta" id="videoMeta">
+            视频信息
+        </div>
+    </section>
+
+    <!-- 舆情概览 -->
+    <section class="section">
+        <div class="section-title">舆情概览</div>
+
+        <div class="stat-grid">
+
+            <div class="stat-card">
+                <div class="stat-label">评论总数</div>
+                <div class="stat-value" id="totalComments">0</div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-label">正面评论</div>
+                <div class="stat-value positive" id="positiveComments">0</div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-label">中性评论</div>
+                <div class="stat-value neutral" id="neutralComments">0</div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-label">负面评论</div>
+                <div class="stat-value negative" id="negativeComments">0</div>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- 风险 -->
+    <section class="section">
+        <div class="section-title">风险概览</div>
+
+        <div class="risk-grid">
+
+            <div class="risk-card">
+                <div class="risk-name">🔴 高风险</div>
+                <div class="risk-number negative" id="highRisk">0</div>
+            </div>
+
+            <div class="risk-card">
+                <div class="risk-name">🟠 中风险</div>
+                <div class="risk-number" id="mediumRisk">0</div>
+            </div>
+
+            <div class="risk-card">
+                <div class="risk-name">🟢 低风险</div>
+                <div class="risk-number positive" id="lowRisk">0</div>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- 用户主要关注 -->
+    <section class="section">
+        <div class="section-title">用户主要关注</div>
+
+        <div class="topic-card">
+
+            <div class="topic-row">
+                <div class="topic-name">硬件配置、升级及可维修性</div>
+                <div class="bar">
+                    <div class="bar-inner" style="width: 100%"></div>
+                </div>
+                <div class="topic-count">69</div>
+            </div>
+
+            <div class="topic-row">
+                <div class="topic-name">AI能力与家庭自动化</div>
+                <div class="bar">
+                    <div class="bar-inner" style="width: 100%"></div>
+                </div>
+                <div class="topic-count">69</div>
+            </div>
+
+            <div class="topic-row">
+                <div class="topic-name">价格与价值感</div>
+                <div class="bar">
+                    <div class="bar-inner" style="width: 96%"></div>
+                </div>
+                <div class="topic-count">66</div>
+            </div>
+
+            <div class="topic-row">
+                <div class="topic-name">广告披露与内容可信度</div>
+                <div class="bar">
+                    <div class="bar-inner" style="width: 54%"></div>
+                </div>
+                <div class="topic-count">37</div>
+            </div>
+
+            <div class="topic-row">
+                <div class="topic-name">隐私安全与家庭监控顾虑</div>
+                <div class="bar">
+                    <div class="bar-inner" style="width: 41%"></div>
+                </div>
+                <div class="topic-count">28</div>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- AI总结 -->
+    <section class="section">
+        <div class="section-title">AI 舆情总结</div>
+
+        <div class="summary-card">
+
+            <div class="summary-block">
+                <div class="summary-heading">整体舆情</div>
+
+                <div class="summary-text">
+                    当前尚未连接 YouTube API 和 AI 分析服务。
+                    完成后，这里会根据实际评论自动生成整体舆情总结。
+                </div>
+            </div>
+
+            <div class="summary-block">
+                <div class="summary-heading">主要购买阻力</div>
+
+                <div class="summary-text">
+                    完成 AI 接入后，将自动归纳用户不购买产品的主要原因，
+                    例如价格、产品价值、硬件配置、隐私安全以及产品成熟度等。
+                </div>
+            </div>
+
+            <div class="summary-block">
+                <div class="summary-heading">重点风险</div>
+
+                <div class="summary-text">
+                    完成 AI 接入后，将自动识别需要重点关注的高风险评论。
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- 评论明细 -->
+    <section class="section">
+
+        <div class="section-title">评论明细</div>
+
+        <div class="table-card">
+
+            <div class="table-toolbar">
+
+                <select class="filter" id="sentimentFilter">
+                    <option value="all">全部情绪</option>
+                    <option value="positive">正面</option>
+                    <option value="neutral">中性</option>
+                    <option value="negative">负面</option>
+                </select>
+
+                <select class="filter" id="riskFilter">
+                    <option value="all">全部风险</option>
+                    <option value="high">高风险</option>
+                    <option value="medium">中风险</option>
+                    <option value="low">低风险</option>
+                </select>
+
+            </div>
+
+            <table class="comment-table">
+
+                <thead>
+                    <tr>
+                        <th>作者</th>
+                        <th>评论</th>
+                        <th>情绪</th>
+                        <th>主题</th>
+                        <th>风险</th>
+                        <th>点赞</th>
+                    </tr>
+                </thead>
+
+                <tbody id="commentTableBody">
+
+                    <tr>
+                        <td colspan="6">
+                            <div class="empty">
+                                输入 YouTube 视频链接后开始分析
+                            </div>
+                        </td>
+                    </tr>
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </section>
+
+</main>
+
+<footer class="footer">
+    YouTube 舆情分析工具 · 第一版原型
+</footer>
+
+<script>
+
+function startAnalysis() {
+
+    const url = document.getElementById("youtubeUrl").value.trim();
+
+    if (!url) {
+        alert("请先输入 YouTube 视频链接。");
+        return;
+    }
+
+    const button = document.getElementById("analyzeBtn");
+    const loading = document.getElementById("loading");
+    const status = document.getElementById("systemStatus");
+
+    button.disabled = true;
+    button.textContent = "分析中...";
+    loading.style.display = "block";
+    status.textContent = "正在分析";
+
+    setTimeout(() => {
+
+        loading.style.display = "none";
+
+        document.getElementById("videoCard").style.display = "block";
+
+        document.getElementById("videoTitle").textContent =
+            "YouTube 视频分析结果（演示）";
+
+        document.getElementById("videoMeta").textContent =
+            "当前为网页原型，下一阶段将接入真实 YouTube 数据。";
+
+        document.getElementById("totalComments").textContent = "624";
+        document.getElementById("positiveComments").textContent = "46";
+        document.getElementById("neutralComments").textContent = "565";
+        document.getElementById("negativeComments").textContent = "13";
+
+        document.getElementById("highRisk").textContent = "5";
+        document.getElementById("mediumRisk").textContent = "222";
+        document.getElementById("lowRisk").textContent = "397";
+
+        document.getElementById("commentTableBody").innerHTML = `
+            <tr>
+                <td>@ExampleUser</td>
+
+                <td>
+                    <div class="comment-text">
+                        这是一个演示评论。接入 YouTube API 后，
+                        这里会显示真实的用户评论。
+                    </div>
+                </td>
+
+                <td>
+                    <span class="tag tag-negative">
+                        负面
+                    </span>
+                </td>
+
+                <td>
+                    价格 / 产品价值
+                </td>
+
+                <td>
+                    <span class="tag tag-medium">
+                        中风险
+                    </span>
+                </td>
+
+                <td>
+                    128
+                </td>
+            </tr>
+
+            <tr>
+                <td>@ExampleUser2</td>
+
+                <td>
+                    <div class="comment-text">
+                        This is an example comment.
+                    </div>
+                </td>
+
+                <td>
+                    <span class="tag tag-positive">
+                        正面
+                    </span>
+                </td>
+
+                <td>
+                    产品体验
+                </td>
+
+                <td>
+                    <span class="tag tag-low">
+                        低风险
+                    </span>
+                </td>
+
+                <td>
+                    86
+                </td>
+            </tr>
+        `;
+
+        status.textContent = "演示完成";
+
+        button.disabled = false;
+        button.textContent = "开始分析";
+
+    }, 1000);
+
+}
+
+</script>
+
+</body>
+</html>
